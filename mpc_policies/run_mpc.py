@@ -1,12 +1,12 @@
 """
-This script runs a given MPC policy in a gym-anm environment for a single episode
+This script runs a given MPC policy in a gym_anm environment for a single episode
 and repeats for a range of different MPC hyperparameters:
 - the number of planning steps (= size of the optimization horizon) N,
 - the safety margin hyperparameters \beta (in [0,1]).
 
 The results (non-discounted and discounted returns) are saved in a single .txt file.
 
-For more information about MPC-based policies in `gym-anm`, see the official documentation at
+For more information about MPC-based policies in `gym_anm`, see the official documentation at
 https://gym-anm.readthedocs.io/en/latest/topics/mpc.html.
 
 Examples
@@ -20,7 +20,7 @@ import gym
 from time import time
 import argparse
 
-from gym_anm import MPCAgentConstant, MPCAgentPerfect
+from gym_anm_custom import MPCAgentConstant, MPCAgentPerfect
 
 
 # The hyperparameters to vary between different runs.

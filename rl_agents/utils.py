@@ -12,12 +12,16 @@ from stable_baselines3.common.monitor import Monitor
 
 from .wrappers import NormalizeActionWrapper, TimeLimitWrapper
 
+from gym_anm.envs import SimplEnv
+from gym_anm.envs import ANM6Easy
 
 def make_envs(env_id, log_dir, gamma, max_train_ep_length, max_eval_ep_length, seed):
     """Make training and evaluation environments (vectorized envs)."""
 
     # Training env
-    train_env = gym.make(env_id)
+    # train_env = gym.make(env_id)
+    # train_env = ANM6Easy()
+    train_env = SimplEnv()
     train_env.seed(seed)                                          # Set random seed
     train_env = TimeLimitWrapper(train_env, max_train_ep_length)  # Limit length of training episodes
     train_env = Monitor(train_env, log_dir)                       # Monitor training
@@ -26,7 +30,9 @@ def make_envs(env_id, log_dir, gamma, max_train_ep_length, max_eval_ep_length, s
     train_env = VecNormalize(train_env, gamma=gamma)              # Normalise observations and rewards
 
     # Eval env
-    eval_env = gym.make(env_id)
+    # eval_env = gym.make(env_id)
+    # eval_env = ANM6Easy()
+    eval_env = SimplEnv()
     eval_env.seed(seed)                                           # Set random seed
     eval_env = TimeLimitWrapper(eval_env, max_eval_ep_length)     # Set a maximum number of timesteps during eval
     eval_env = Monitor(eval_env)  # Used to ensure original action space is not modified by `NormalizeActionWrapper`

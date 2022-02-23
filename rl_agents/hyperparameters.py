@@ -5,8 +5,8 @@ testing RL agents.
 
 import os
 
-BASE_DIR = './results/'
-ENV_ID = 'gym_anm:ANM6Easy-v0'
+BASE_DIR = './SAC2/'
+ENV_ID = 'gym_anm:simplenv-v0'
 GAMMA = 0.995
 
 POLICY = 'MlpPolicy'

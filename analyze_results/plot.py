@@ -9,7 +9,7 @@ set_rc_params()
 FIGSIZE = (10, 4)
 
 # Path to folders containing training statistics.
-folder = '/Users/uni/Dev/gym-anm-exp/analyze_results/results/results_12_03_2021/'
+folder = '/Users/uni/Dev/gym_anm-exp/analyze_results/results/results_12_03_2021/'
 agent_groups = [['sac'], ['ppo']]
 
 # Load training stats.
