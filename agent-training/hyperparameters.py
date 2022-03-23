@@ -1,0 +1,5 @@
+TRAIN_STEPS = 2000000
+
+BASE_DIR = '../PPO_v1_0/'
+
+MODEL_DIR = BASE_DIR + 'best_model'
