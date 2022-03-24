@@ -283,7 +283,7 @@ class Simulator(object):
                     dev.soc = dev.soc_max
 
         # 3. Compute all electrical quantities in the network.
-        _, _, _, _, pfe_converged = \
+        _, _, _, _, _, pfe_converged = \
             self.transition(P_load, P_pot, P_set_points, Q_set_points)
 
         # 4. Update the SoC of each DES unit to match the `initial_state`.
@@ -504,7 +504,6 @@ class Simulator(object):
             tolerance) for the power flow equations. If False, it might indicate
             that the network has collapsed (e.g., voltage collapse).
         """
-
         for dev_id, dev in self.devices.items():
 
             # 1. Compute the (P, Q) injection point of each load.
@@ -541,9 +540,9 @@ class Simulator(object):
         self.state = self._gather_state()
 
         # 7. Compute the reward associated with the transition.
-        reward, e_loss, penalty = self._compute_reward()
+        reward, price, e_loss, penalty = self._compute_reward()
 
-        return self.state, reward, e_loss, penalty, self.pfe_converged
+        return self.state, reward, price, e_loss, penalty, self.pfe_converged
 
     def _get_bus_total_injections(self):
         """
@@ -665,8 +664,11 @@ class Simulator(object):
         price = 0.
         # Compute price of energy input/output from the grid
         for dev in self.devices.values():
-            if isinstance(dev, Generator) and dev.is_grid:
+            if dev.is_grid:
+                # print("Grid", dev.p)
                 price += dev.p
+            # else:
+                # print("Gen", dev.p, "out of", dev.p_pot)
 
         # Compute the energy loss.
         e_loss = 0.
@@ -692,8 +694,9 @@ class Simulator(object):
         # penalty *= self.delta_t * self.lamb
 
         # Compute the total reward.
-        reward = -price
+        reward = 0.
+        reward -= price
         reward -= e_loss
         reward -= penalty
 
-        return reward, e_loss, penalty
+        return reward, price, e_loss, penalty

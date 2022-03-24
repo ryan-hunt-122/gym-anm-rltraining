@@ -69,7 +69,7 @@ def solve_pfe_newton_raphson(simulator, xtol=1e-5):
 
     # Update slack device injections.
     for dev in simulator.devices.values():
-        if dev.is_slack:
+        if dev.is_slack or dev.is_grid:
             dev.p = simulator.buses[dev.bus_id].p
             dev.q = simulator.buses[dev.bus_id].q
 
