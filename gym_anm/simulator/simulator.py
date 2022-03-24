@@ -96,7 +96,7 @@ class Simulator(object):
         self.N_bus = len(self.buses)
         self.N_device = len(self.devices)
         self.N_load = len([0 for d in self.devices.values() if isinstance(d, Load)])
-        self.N_non_slack_gen = len([0 for d in self.devices.values() if isinstance(d, Generator) and not d.is_slack])
+        self.N_non_slackgrid_gen = len([0 for d in self.devices.values() if isinstance(d, Generator) and not d.is_slack and not d.is_grid])
         self.N_des = len([0 for d in self.devices.values() if isinstance(d, StorageUnit)])
         self.N_gen_rer = len([0 for d in self.devices.values() if isinstance(d, RenewableGen)])
 
@@ -171,6 +171,9 @@ class Simulator(object):
 
             elif dev_type == 3:
                 dev = StorageUnit(dev_spec, bus_ids, baseMVA)
+
+            elif dev_type == 4:
+                dev = Generator(dev_spec, bus_ids, baseMVA)
 
             else:
                 raise NotImplementedError
@@ -250,7 +253,7 @@ class Simulator(object):
         P_dev = init_state[:self.N_device]
         Q_dev = init_state[self.N_device: 2 * self.N_device]
         soc = init_state[2 * self.N_device: 2 * self.N_device + self.N_des]
-        P_max = init_state[2 * self.N_device + self.N_des: 2 * self.N_device + self.N_des + self.N_non_slack_gen]
+        P_max = init_state[2 * self.N_device + self.N_des: 2 * self.N_device + self.N_des + self.N_non_slackgrid_gen]
 
         P_load = {}
         P_pot = {}
@@ -261,11 +264,11 @@ class Simulator(object):
             if isinstance(dev, Load):
                 P_load[dev_id] = P_dev[idx]
 
-            elif isinstance(dev, (Generator, StorageUnit)) and not dev.is_slack:
+            elif isinstance(dev, (Generator, StorageUnit)) and not dev.is_slack and not dev.is_grid:
                 P_set_points[dev_id] = P_dev[idx]
                 Q_set_points[dev_id] = Q_dev[idx]
 
-                if isinstance(dev, Generator) and not dev.is_slack:
+                if isinstance(dev, Generator) and not dev.is_slack and not dev.is_grid:
                     P_pot[dev_id] = P_max[gen_idx]
                     gen_idx += 1
 
@@ -371,7 +374,7 @@ class Simulator(object):
         P_gen_bounds, Q_gen_bounds = {}, {}
         P_des_bounds, Q_des_bounds = {}, {}
         for dev_id, dev in self.devices.items():
-            if isinstance(dev, Generator) and not dev.is_slack:
+            if isinstance(dev, Generator) and not dev.is_slack and not dev.is_grid:
                 P_gen_bounds[dev_id] = (dev.p_min * self.baseMVA, dev.p_max * self.baseMVA)
                 Q_gen_bounds[dev_id] = (dev.q_min * self.baseMVA, dev.q_max * self.baseMVA)
 
@@ -432,7 +435,7 @@ class Simulator(object):
             if isinstance(dev, StorageUnit):
                 des_soc[dev_id] = {'MWh': (dev.soc_min * self.baseMVA, dev.soc_max * self.baseMVA),
                                    'pu': (dev.soc_min, dev.soc_max)}
-            if isinstance(dev, Generator) and not dev.is_slack:
+            if isinstance(dev, Generator) and not dev.is_slack and not dev.is_grid:
                 gen_p_max[dev_id] = {'MW': (dev.p_min * self.baseMVA, dev.q_max * self.baseMVA),
                                      'pu': (dev.p_min, dev.p_max)}
 
@@ -509,7 +512,7 @@ class Simulator(object):
                 dev.map_pq(P_load[dev_id] / self.baseMVA)
 
             # 2. Compute the (P, Q) injection point of each non-slack generator.
-            elif isinstance(dev, Generator) and not dev.is_slack:
+            elif isinstance(dev, Generator) and not dev.is_slack and not dev.is_grid:
                 dev.p_pot = np.clip(P_potential[dev_id] / self.baseMVA, dev.p_min, dev.p_max)
                 dev.map_pq(P_set_points[dev_id] / self.baseMVA,
                            Q_set_points[dev_id] / self.baseMVA)
@@ -523,7 +526,7 @@ class Simulator(object):
                 dev.update_soc(self.delta_t)
 
             # 4a. Initialize the (P, Q) injection point of the slack bus device to 0.
-            elif dev.is_slack:
+            elif dev.is_slack or dev.is_grid:
                 dev.p = 0.
                 dev.q = 0.
 
@@ -598,7 +601,7 @@ class Simulator(object):
                 des_soc['pu'][dev_id] = dev.soc
                 des_soc['MWh'][dev_id] = dev.soc * self.baseMVA
 
-            if isinstance(dev, Generator) and not dev.is_slack:
+            if isinstance(dev, Generator) and not dev.is_slack and not dev.is_grid:
                 gen_p_max['pu'][dev_id] = dev.p_pot
                 gen_p_max['MW'][dev_id] = dev.p_pot * self.baseMVA
 
@@ -659,31 +662,38 @@ class Simulator(object):
             The total penalty due to violation of operating constraints (p.u. per
             hour).
         """
+        price = 0.
+        # Compute price of energy input/output from the grid
+        for dev in self.devices.values():
+            if isinstance(dev, Generator) and dev.is_grid:
+                price += dev.p
 
         # Compute the energy loss.
         e_loss = 0.
-        for dev in self.devices.values():
-            if isinstance(dev, (Generator, Load)):
-                e_loss += dev.p
-
-            if isinstance(dev, RenewableGen):
-                e_loss += np.maximum(0, dev.p_pot - dev.p)
-
-        e_loss *= self.delta_t
+        # for dev in self.devices.values():
+        #     if isinstance(dev, (Generator, Load)):
+        #         e_loss += dev.p
+        #
+        #     if isinstance(dev, RenewableGen):
+        #         e_loss += np.maximum(0, dev.p_pot - dev.p)
+        #
+        # e_loss *= self.delta_t
 
         # Compute the penalty term.
         penalty = 0.
-        for bus in self.buses.values():
-            v_magn = np.abs(bus.v)
-            penalty += np.maximum(0, v_magn - bus.v_max) \
-                       + np.maximum(0, bus.v_min - v_magn)
-
-        for branch in self.branches.values():
-            penalty += np.maximum(0, np.abs(branch.s_apparent_max) - branch.rate)
-
-        penalty *= self.delta_t * self.lamb
+        # for bus in self.buses.values():
+        #     v_magn = np.abs(bus.v)
+        #     penalty += np.maximum(0, v_magn - bus.v_max) \
+        #                + np.maximum(0, bus.v_min - v_magn)
+        #
+        # for branch in self.branches.values():
+        #     penalty += np.maximum(0, np.abs(branch.s_apparent_max) - branch.rate)
+        #
+        # penalty *= self.delta_t * self.lamb
 
         # Compute the total reward.
-        reward = - (e_loss + penalty)
+        reward = -price
+        reward -= e_loss
+        reward -= penalty
 
         return reward, e_loss, penalty

@@ -9,7 +9,7 @@ import numpy as np
 
 from .network import network
 
-class SimplEnv(ANMEnv):
+class BatteryEnv(ANMEnv):
 
     def __init__(self):
         observation = 'state'          # observation space
@@ -79,11 +79,11 @@ def _get_load_time_series():
     """Return the fixed 24-hour time-series for the load injections."""
 
     # Device 2 (industrial load).
-    s1 = -4 * np.ones(25)
-    s12 = np.linspace(-4.75, -9.25, 7)
-    s2 = - 10 * np.ones(13)
-    s23 = np.linspace(-11.25, -18.75, 7)
-    s3 = - 20 * np.ones(13)
+    s1 = 0 * np.ones(25)
+    s12 = np.linspace(-1.75, -28.25, 7)
+    s2 = - 30 * np.ones(13)
+    s23 = np.linspace(-30, -30, 7)
+    s3 = - 30 * np.ones(13)
     P2 = np.concatenate((s1, s12, s2, s23, s3, s23[::-1], s2, s12[::-1],
                          s1[:4]))
 
@@ -98,10 +98,10 @@ def _get_gen_time_series():
 
     # Device 1 (wind farm).
     s1 = 40 * np.ones(25)
-    s12 = np.linspace(36.375, 14.625, 7)
-    s2 = 11 * np.ones(13)
-    s23 = np.linspace(14.725, 36.375, 7)
-    s3 = 40 * np.ones(13)
+    s12 = np.linspace(36.375, 4.625, 7)
+    s2 = 0 * np.ones(13)
+    s23 = np.linspace(0, 0, 7)
+    s3 = 0 * np.ones(13)
     P1 = np.concatenate((s1, s12, s2, s23, s3, s23[::-1], s2, s12[::-1],
                          s1[:4]))
 

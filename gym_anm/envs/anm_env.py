@@ -214,6 +214,7 @@ class ANMEnv(gym.Env):
 
         else:
             bounds = self.simulator.state_bounds
+            print(bounds)
             for key, nodes, unit in self.obs_values:
                 for n in nodes:
                     if key == 'aux':
@@ -224,6 +225,7 @@ class ANMEnv(gym.Env):
                             lower_bounds.append(-np.inf)
                             upper_bounds.append(np.inf)
                     else:
+                        print(key, n, unit)
                         lower_bounds.append(bounds[key][n][unit][0])
                         upper_bounds.append(bounds[key][n][unit][1])
 
@@ -264,7 +266,7 @@ class ANMEnv(gym.Env):
 
             # Check s_0 has the correct size.
             expected = 2 * self.simulator.N_device + self.simulator.N_des \
-                       + self.simulator.N_non_slack_gen + self.K
+                       + self.simulator.N_non_slackgrid_gen + self.K
             if self.state.size != expected:
                 msg = "Expected size of initial state s0 is %d but actual is %d" \
                       % (expected, self.state.size)
@@ -356,7 +358,7 @@ class ANMEnv(gym.Env):
 
         # 1a. Sample the internal stochastic variables.
         vars = self.next_vars(self.state)
-        expected_size = self.simulator.N_load + self.simulator.N_non_slack_gen \
+        expected_size = self.simulator.N_load + self.simulator.N_non_slackgrid_gen \
                         + self.K
         if vars.size != expected_size:
             msg = 'Next vars vector has size %d but expected is %d' % \
@@ -365,8 +367,8 @@ class ANMEnv(gym.Env):
 
         P_load = vars[:self.simulator.N_load]
         P_pot = vars[self.simulator.N_load: self.simulator.N_load +
-                                            self.simulator.N_non_slack_gen]
-        aux = vars[self.simulator.N_load + self.simulator.N_non_slack_gen:]
+                                            self.simulator.N_non_slackgrid_gen]
+        aux = vars[self.simulator.N_load + self.simulator.N_non_slackgrid_gen:]
         err_msg = 'Only {} auxiliary variables are generated, but K={} are ' \
                   'expected.'.format(len(aux), self.K)
         assert len(aux) == self.K, err_msg
@@ -537,7 +539,7 @@ class ANMEnv(gym.Env):
                                if isinstance(d, StorageUnit)]
                     elif 'gen' in o[0]:
                         ids = [i for i, d in self.simulator.devices.items()
-                               if isinstance(d, Generator) and not d.is_slack]
+                               if isinstance(d, Generator) and not d.is_slack and not d.is_grid]
                     elif 'branch' in o[0]:
                         ids = list(self.simulator.branches.keys())
                     elif o[0] == 'aux':

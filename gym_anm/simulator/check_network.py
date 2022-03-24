@@ -25,8 +25,8 @@ def check_network_specs(network):
 
     # Check that there is a unique slack device.
     dev_types = network['device'][:, DEV_H['DEV_TYPE']]
-    if np.sum(dev_types == 0) != 1:
-        raise DeviceSpecError('The network device array should contain exactly 1 slack device (with DEV_TYPE = 0).')
+    if np.sum(dev_types == 0) + np.sum(dev_types == 4) != 1:
+        raise DeviceSpecError('The network device array should contain exactly 1 slack or grid device (with DEV_TYPE = {0, 4}).')
 
     # Check slack bus and slack device match.
     slack_bus = network['bus'][np.where(np.array(bus_types) == 0)[0], BUS_H['BUS_ID']]

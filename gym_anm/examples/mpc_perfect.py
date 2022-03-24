@@ -7,8 +7,10 @@ over the optimization horizon.
 
 For more information, see https://gym-anm.readthedocs.io/en/latest/topics/mpc.html#perfect-forecast.
 """
+import time
+
 import gym
-from gym_anm_custom import MPCAgentPerfect
+from gym_anm import MPCAgentPerfect
 
 def run():
     env = gym.make('ANM6Easy-v0')
@@ -19,10 +21,13 @@ def run():
                             safety_margin=0.96, planning_steps=10)
 
     # Run the policy.
-    for t in range(100):
+    for t in range(10):
         a = agent.act(env)
         obs, r, done, _ = env.step(a)
+        env.render()
         print(f't={t}, r_t={r:.3}')
+        print(a)
+        time.sleep(0.5)
 
 if __name__ == '__main__':
     run()

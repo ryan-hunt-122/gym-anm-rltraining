@@ -83,15 +83,18 @@ class Device(object):
             self.bus_id = int(self.bus_id)
 
         self.type = dev_spec[DEV_H['DEV_TYPE']]
-        allowed = [-1, 0, 1, 2, 3]
+        allowed = [-1, 0, 1, 2, 3, 4]
         if self.type is None or self.type not in allowed:
             raise DeviceSpecError('The DEV_TYPE value for device %d should be'
                                   ' in %s.' % allowed)
 
+        self.is_slack = False
+        self.is_grid = False
         if self.type == 0:
             self.is_slack = True
-        else:
-            self.is_slack = False
+        elif self.type == 4:
+            self.is_grid = True
+
 
         # Components device-specific.
         self.qp_ratio = None
@@ -196,7 +199,7 @@ class Generator(Device):
             self.p_max = np.inf
             logger.warning('The P_max value of device %d is set to infinity.'
                            % self.dev_id)
-        elif self.p_max < 0 and not self.is_slack:
+        elif self.p_max < 0 and not self.is_slack and not self.is_grid:
             raise GenSpecError(
                 'The PMAX value of device %d should be >= 0.' % self.dev_id)
         else:
@@ -204,11 +207,11 @@ class Generator(Device):
 
         self.p_min = dev_spec[DEV_H['PMIN']]
         if self.p_min is None:
-            if self.is_slack:
+            if self.is_slack or self.is_grid:
                 self.p_min = - np.inf
             else:
                 self.p_min = 0.
-        elif self.p_min < 0 and not self.is_slack:
+        elif self.p_min < 0 and not self.is_slack and not self.is_grid:
             raise GenSpecError(
                 'The PMIN value of device %d should be >= 0.' % self.dev_id)
         else:
@@ -220,7 +223,7 @@ class Generator(Device):
         self.q_max = dev_spec[DEV_H['QMAX']]
         if self.q_max is None:
             self.q_max = np.inf
-            if not self.is_slack:
+            if not self.is_slack and not self.is_grid:
                 logger.warning('The Q_max value of device %d is set to '
                                'infinity.' % self.dev_id)
         else:
@@ -229,7 +232,7 @@ class Generator(Device):
         self.q_min = dev_spec[DEV_H['QMIN']]
         if self.q_min is None:
             self.q_min = - np.inf
-            if not self.is_slack:
+            if not self.is_slack and not self.is_grid:
                 logger.warning('The Q_min value of device %d is set to - '
                                'infinity.' % self.dev_id)
         else:

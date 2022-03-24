@@ -8,13 +8,20 @@ For more information, see https://gym-anm.readthedocs.io/en/latest/topics/using_
 import gym
 import time
 
+from stable_baselines3 import PPO
+
+
 def run():
     env = gym.make('gym_anm:ANM6Easy-v0')
-    o = env.reset()
+    obs = env.reset()
+    done, state = False, None
 
-    for i in range(10):
-        a = env.action_space.sample()
-        o, r, done, info = env.step(a)
+    model = PPO.load("/Users/ryanhunt/PycharmProjects/rl-training/gym-anm-exp/gym_anm/agents/PPO_SimplEnv_v0/best_model")
+
+    for i in range(1000):
+        action, state = model.predict(obs, state=state, deterministic=True)
+        obs, reward, done, _ = env.step(action)
+
         env.render()
         time.sleep(0.5)   # otherwise the rendering is too fast for the human eye
 
