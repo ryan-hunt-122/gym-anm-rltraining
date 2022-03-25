@@ -25,6 +25,7 @@ class GenToGridEnv(ANMEnv):
 
         # Consumption and maximum generation 24-hour time series.
         self.P_maxs = _get_gen_time_series()
+        self.G_prices = _get_price_time_series()
 
     def init_state(self):
         n_dev, n_gen, n_des = 2, 1, 0
@@ -51,14 +52,12 @@ class GenToGridEnv(ANMEnv):
         for p_max in self.P_maxs:
             vars.append(p_max[aux])
 
+        for g_price in self.G_prices:
+            vars.append(g_price[aux])
+
         vars.append(aux)
 
         return np.array(vars)
-
-    # def step(self, action):
-    #     print(f'action:{action}')
-    #
-    #     return super().step(action)
 
 
 def _get_gen_time_series():
@@ -78,3 +77,18 @@ def _get_gen_time_series():
     assert P_maxs.shape == (1, 96)
 
     return P_maxs
+
+def _get_price_time_series():
+    """Return the fixed 24-hour time-series for the grid energy price."""
+
+    s1 = 1 * np.ones(25)
+    s12 = np.linspace(1, 1, 7)
+    s2 = 1 * np.ones(13)
+    s23 = np.linspace(1, 1, 7)
+    s3 = 1 * np.ones(13)
+    G1 = np.concatenate((s1, s12, s2, s23, s3, s23[::-1], s2, s12[::-1], s1[:4]))
+
+    G_prices = np.expand_dims(G1, axis=0)
+    assert G_prices.shape == (1, 96)
+
+    return G_prices
