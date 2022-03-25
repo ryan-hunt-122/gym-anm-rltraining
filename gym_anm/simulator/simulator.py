@@ -97,6 +97,7 @@ class Simulator(object):
         self.N_device = len(self.devices)
         self.N_load = len([0 for d in self.devices.values() if isinstance(d, Load)])
         self.N_non_slackgrid_gen = len([0 for d in self.devices.values() if isinstance(d, Generator) and not d.is_slack and not d.is_grid])
+        self.N_grid = len([0 for d in self.devices.values() if d.is_grid])
         self.N_des = len([0 for d in self.devices.values() if isinstance(d, StorageUnit)])
         self.N_gen_rer = len([0 for d in self.devices.values() if isinstance(d, RenewableGen)])
 
@@ -254,6 +255,7 @@ class Simulator(object):
         Q_dev = init_state[self.N_device: 2 * self.N_device]
         soc = init_state[2 * self.N_device: 2 * self.N_device + self.N_des]
         P_max = init_state[2 * self.N_device + self.N_des: 2 * self.N_device + self.N_des + self.N_non_slackgrid_gen]
+        G_price = init_state[2 * self.N_device + self.N_des + self.N_non_slackgrid_gen:][0] if self.N_grid else None
 
         P_load = {}
         P_pot = {}
@@ -284,7 +286,7 @@ class Simulator(object):
 
         # 3. Compute all electrical quantities in the network.
         _, _, _, _, _, pfe_converged = \
-            self.transition(P_load, P_pot, P_set_points, Q_set_points)
+            self.transition(P_load, P_pot, P_set_points, Q_set_points, G_price)
 
         # 4. Update the SoC of each DES unit to match the `initial_state`.
         soc_idx = 0
@@ -466,7 +468,7 @@ class Simulator(object):
 
         return specs
 
-    def transition(self, P_load, P_potential, P_set_points, Q_set_points):
+    def transition(self, P_load, P_potential, P_set_points, Q_set_points, G_price=None):
         """
         Simulate a transition of the system from time :math:`t` to time :math:`t+1`.
 
@@ -540,7 +542,7 @@ class Simulator(object):
         self.state = self._gather_state()
 
         # 7. Compute the reward associated with the transition.
-        reward, price, e_loss, penalty = self._compute_reward()
+        reward, price, e_loss, penalty = self._compute_reward(G_price)
 
         return self.state, reward, price, e_loss, penalty, self.pfe_converged
 
@@ -642,7 +644,7 @@ class Simulator(object):
 
         return state
 
-    def _compute_reward(self):
+    def _compute_reward(self, G_price=None):
         """
         Return the total reward associated with the current state of the system.
 
@@ -666,7 +668,7 @@ class Simulator(object):
         for dev in self.devices.values():
             if dev.is_grid:
                 # print("Grid", dev.p)
-                price += dev.p
+                price += dev.p * G_price
             # else:
                 # print("Gen", dev.p, "out of", dev.p_pot)
 
