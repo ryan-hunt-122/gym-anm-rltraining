@@ -8,7 +8,7 @@ from stable_baselines3.common.vec_env import DummyVecEnv, VecEnv, sync_envs_norm
 from tqdm.auto import tqdm
 
 from stable_baselines3.common.callbacks import BaseCallback, EventCallback
-from evaluation import evaluate
+from .evaluation import evaluate
 
 class ProgressBarCallback(BaseCallback):
     """

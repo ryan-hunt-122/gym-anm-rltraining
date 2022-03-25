@@ -1,32 +1,37 @@
 import gym
-from stable_baselines3 import PPO
-from stable_baselines3.ppo import MlpPolicy
+from stable_baselines3 import PPO, SAC
+from stable_baselines3.ppo import MlpPolicy as PPOMLP
+from stable_baselines3.sac import MlpPolicy as SACMLP
 
-from gym_anm.envs import SimplEnv
+from gym_anm.envs import SimplEnv, GenToGridEnv, DelayedSellEnv
 
-from callbacks import ProgressBarManager
-from callbacks import EvalCallback
-from rl_agents.hyperparameters import *
+from .callbacks import ProgressBarManager, EvalCallback
+from .hyperparameters import *
+from .utils import parse_args
 
-if __name__ == '__main__':
-    eval_env = gym.make('ANM6Easy-v0')
-    env = gym.make('ANM6Easy-v0')
+args = parse_args()
 
-    eval_callback = EvalCallback(eval_env,
-                                 best_model_save_path=BASE_DIR,
-                                 each_model_save_path=BASE_DIR,
-                                 log_path=BASE_DIR,
-                                 eval_freq=10000,
-                                 n_eval_episodes=5
-                                 )
-    callbacks = [eval_callback]
+if args.agent == 'PPO':
+    MODEL, POLICY = PPO, PPOMLP
+elif args.agent == 'SAC':
+    MODEL, POLICY = SAC, SACMLP
+else:
+    raise NotImplementedError
 
-    model = PPO(MlpPolicy, env, verbose=0)
-    with ProgressBarManager(TRAIN_STEPS) as c:
-        callbacks += [c]
-        model.learn(total_timesteps=TRAIN_STEPS, callback=callbacks)
+eval_env = DelayedSellEnv()
+env = DelayedSellEnv()
 
-    # print("Evaluating")
-    # mean_reward, std_reward = evaluate(model, num_episodes=100)
+eval_callback = EvalCallback(eval_env,
+                             best_model_save_path=BASE_DIR,
+                             each_model_save_path=BASE_DIR,
+                             log_path=BASE_DIR,
+                             eval_freq=10000,
+                             n_eval_episodes=5
+                             )
+callbacks = [eval_callback]
 
-    # print(f"mean_reward:{mean_reward:.2f} +/- {std_reward:.2f}")
+model = MODEL(POLICY, env, verbose=0)
+
+with ProgressBarManager(TRAIN_STEPS) as c:
+    callbacks += [c]
+    model.learn(total_timesteps=TRAIN_STEPS, callback=callbacks)

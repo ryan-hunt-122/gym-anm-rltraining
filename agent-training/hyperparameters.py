@@ -1,5 +1,5 @@
-TRAIN_STEPS = 2000000
+TRAIN_STEPS = 3000000
 
-BASE_DIR = '../PPO_v1_0/'
+BASE_DIR = '../PPO_v2_0/'
 
 MODEL_DIR = BASE_DIR + 'best_model'
