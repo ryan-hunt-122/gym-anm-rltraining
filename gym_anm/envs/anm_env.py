@@ -16,7 +16,6 @@ from .utils import check_env_args
 from ..simulator.components.constants import STATE_VARIABLES
 from ..simulator.components import StorageUnit, Generator, Load
 
-
 logger = getLogger(__file__)
 
 
@@ -214,7 +213,6 @@ class ANMEnv(gym.Env):
 
         else:
             bounds = self.simulator.state_bounds
-            print(bounds)
             for key, nodes, unit in self.obs_values:
                 for n in nodes:
                     if key == 'aux':
@@ -225,7 +223,6 @@ class ANMEnv(gym.Env):
                             lower_bounds.append(-np.inf)
                             upper_bounds.append(np.inf)
                     else:
-                        print(key, n, unit)
                         lower_bounds.append(bounds[key][n][unit][0])
                         upper_bounds.append(bounds[key][n][unit][1])
 
@@ -233,6 +230,7 @@ class ANMEnv(gym.Env):
                            high=np.array(upper_bounds),
                            dtype=np.float64)
 
+        print(space.shape)
         return space
 
     def reset(self):
@@ -359,7 +357,7 @@ class ANMEnv(gym.Env):
         # 1a. Sample the internal stochastic variables.
         vars = self.next_vars(self.state)
         expected_size = self.simulator.N_load + self.simulator.N_non_slackgrid_gen \
-                        + self.K
+                        + self.simulator.N_grid + self.K
         if vars.size != expected_size:
             msg = 'Next vars vector has size %d but expected is %d' % \
                   (vars.size, expected_size)
@@ -368,7 +366,9 @@ class ANMEnv(gym.Env):
         P_load = vars[:self.simulator.N_load]
         P_pot = vars[self.simulator.N_load: self.simulator.N_load +
                                             self.simulator.N_non_slackgrid_gen]
-        aux = vars[self.simulator.N_load + self.simulator.N_non_slackgrid_gen:]
+        G_price = vars[self.simulator.N_load + self.simulator.N_non_slackgrid_gen:
+                       self.simulator.N_load + self.simulator.N_non_slackgrid_gen + self.simulator.N_grid]
+        aux = vars[self.simulator.N_load + self.simulator.N_non_slackgrid_gen + self.simulator.N_grid:]
         err_msg = 'Only {} auxiliary variables are generated, but K={} are ' \
                   'expected.'.format(len(aux), self.K)
         assert len(aux) == self.K, err_msg
@@ -380,7 +380,7 @@ class ANMEnv(gym.Env):
             if isinstance(dev, Load):
                 P_load_dict[dev_id] = P_load[load_idx]
                 load_idx += 1
-            elif isinstance(dev, Generator) and not dev.is_slack:
+            elif isinstance(dev, Generator) and not dev.is_slack and not dev.is_grid:
                 P_pot_dict[dev_id] = P_pot[gen_idx]
                 gen_idx += 1
 
@@ -388,7 +388,7 @@ class ANMEnv(gym.Env):
         P_set_points = {}
         Q_set_points = {}
         gen_non_slack_ids = [i for i, dev in self.simulator.devices.items()
-                             if isinstance(dev, Generator) and not dev.is_slack]
+                             if isinstance(dev, Generator) and not dev.is_slack and not dev.is_grid]
         des_ids = [i for i, dev in self.simulator.devices.items()
                    if isinstance(dev, StorageUnit)]
         N_gen = len(gen_non_slack_ids)
@@ -406,9 +406,9 @@ class ANMEnv(gym.Env):
         # 3a. Apply the action in the simulator.
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', MatrixRankWarning)
-            _, r, e_loss, penalty, pfe_converged = \
+            _, r, price, e_loss, penalty, stored, pfe_converged = \
                 self.simulator.transition(P_load_dict, P_pot_dict, P_set_points,
-                                          Q_set_points)
+                                          Q_set_points, G_price)
 
             # A terminal state has been reached if no solution to the power
             # flow equations is found.
@@ -419,7 +419,7 @@ class ANMEnv(gym.Env):
             self.e_loss = np.sign(e_loss) * np.clip(np.abs(e_loss), 0,
                                                     self.costs_clipping[0])
             self.penalty = np.clip(penalty, 0, self.costs_clipping[1])
-            r = - (self.e_loss + self.penalty)
+            r = stored - (price + self.e_loss + self.penalty)
         else:
             # Very large reward if a terminal state has been reached.
             r = - self.costs_clipping[1] / (1 - self.gamma)
@@ -429,7 +429,7 @@ class ANMEnv(gym.Env):
         # 4. Construct the state and observation vector.
         if not self.done:
             for k in range(self.K):
-                self.state[k-self.K] = aux[k]
+                self.state[k - self.K] = aux[k]
             self.state = self._construct_state()
             obs = self.observation(self.state)
 

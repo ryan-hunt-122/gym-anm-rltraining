@@ -46,9 +46,7 @@ class DelayedSellEnv(ANMEnv):
 
         # Energy storage unit.
         for idx, dev_id in enumerate([2]):
-            state[2 * n_dev + idx] = \
-                self.np_random.uniform(self.simulator.devices[dev_id].soc_min,
-                                       self.simulator.devices[dev_id].soc_max)
+            state[2 * n_dev + idx] = self.simulator.devices[dev_id].soc_min
 
         return state
 

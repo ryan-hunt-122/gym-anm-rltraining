@@ -285,7 +285,7 @@ class Simulator(object):
                     dev.soc = dev.soc_max
 
         # 3. Compute all electrical quantities in the network.
-        _, _, _, _, _, pfe_converged = \
+        _, _, _, _, _, _, pfe_converged = \
             self.transition(P_load, P_pot, P_set_points, Q_set_points, G_price)
 
         # 4. Update the SoC of each DES unit to match the `initial_state`.
@@ -542,9 +542,9 @@ class Simulator(object):
         self.state = self._gather_state()
 
         # 7. Compute the reward associated with the transition.
-        reward, price, e_loss, penalty = self._compute_reward(G_price)
+        reward, price, e_loss, penalty, stored = self._compute_reward(G_price)
 
-        return self.state, reward, price, e_loss, penalty, self.pfe_converged
+        return self.state, reward, price, e_loss, penalty, stored, self.pfe_converged
 
     def _get_bus_total_injections(self):
         """
@@ -664,6 +664,7 @@ class Simulator(object):
             hour).
         """
         price = 0.
+        stored = 0.
         # Compute price of energy input/output from the grid
         for dev in self.devices.values():
             if dev.is_grid:
@@ -671,6 +672,10 @@ class Simulator(object):
                 price += dev.p * G_price
             # else:
                 # print("Gen", dev.p, "out of", dev.p_pot)
+
+            # Add a small reward for stored energy
+            # if isinstance(dev, StorageUnit):
+            #     stored += dev.soc * 0.1
 
         # Compute the energy loss.
         e_loss = 0.
@@ -701,4 +706,4 @@ class Simulator(object):
         reward -= e_loss
         reward -= penalty
 
-        return reward, price, e_loss, penalty
+        return reward, price, e_loss, penalty, stored

@@ -12,7 +12,7 @@ network["bus"] = np.array([
 network["device"] = np.array([
     [0, 0, 4, None, 200, -200, 200, -200, None, None, None, None, None, None, None],
     [1, 1, 2, None, 50, 0, 50, -50, 35, None, 20, -20, None, None, None],
-    [2, 1, 3, None, 50, -50, 50, -50, 30, -30, 25, -25, 1000, 0, 0.9]
+    [2, 1, 3, None, 50, -50, 50, -50, 30, -30, 25, -25, 100000000, 0, 1]
 ])
 
 network["branch"] = np.array([
